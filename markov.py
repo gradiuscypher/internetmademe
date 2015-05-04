@@ -28,11 +28,12 @@ class Markov:
         return sentence
 
     def generate_sentence(self, chain_type, seed, min_length, max_length):
-        #TODO: Current search / random methods are SUPER slow. There needs to be a better way.
         sentence = ""
-        start = self.elastic.search(index=chain_type, q=seed)
-        max_search = start['hits']['total']
-        start = self.elastic.search(index=chain_type, q=seed, size=max_search)
+        start = self.elastic.search(index=chain_type, body={"query": {
+            "function_score": {
+                "query": {"match_all": {}},
+                "random_score": {}
+            }}})
         start_key = random.choice(start['hits']['hits'])['_source']['key']
         sentence += start_key
         sentence = self.clean_punctuation(sentence)
@@ -40,7 +41,7 @@ class Markov:
         for x in range(0, random.randint(min_length, max_length)):
             target = ' '.join(sentence.split()[-chain_type:])
             print("Search target: ", target)
-            search = self.elastic.search(index=chain_type, q='key:"' + target + '"', size=max_search)
+            search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
             result_list = search['hits']['hits']
 
             if len(result_list) > 0:
@@ -51,7 +52,7 @@ class Markov:
         while not self.validate_ending(sentence):
             target = ' '.join(sentence.split()[-chain_type:])
             print("Search target: ", target)
-            search = self.elastic.search(index=chain_type, q='key:"' + target + '"', size=max_search)
+            search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
             result_list = search['hits']['hits']
 
             if len(result_list) > 0:
@@ -86,7 +87,8 @@ class Markov:
             print("Post processing completed.")
 
     def validate_ending(self, sentence):
-        ## Meant to ensure that the result doesn't end in things like the, is, etc.
+        # Meant to ensure that the result doesn't end in things like the, is, etc.
+        # TODO: More automation to sort this out
         invalid_endings = ['a', 'is', 'the', 'and']
         split_sentence = sentence.split()
 
