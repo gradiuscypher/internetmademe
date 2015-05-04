@@ -33,7 +33,7 @@ class Markov:
         sentence = ""
         start = self.elastic.search(index=chain_type, body={"query": {
             "function_score": {
-                "query": {"match": {"key": seed}},
+                "query": {"wildcard": {"key": seed}},
                 "random_score": {}
             }}})
         print(len(start['hits']['hits']))
