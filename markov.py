@@ -1,13 +1,65 @@
 import elasticsearch
 import praw
 import random
-import re
 
+
+#TODO: Tons of debug printing that needs to be cleaned up
 
 class Markov:
 
     def __init__(self):
         self.elastic = elasticsearch.Elasticsearch()
+        random.seed()
+
+    def build_chain(self, message, chain_length):
+        pointer = 0
+        split_message = message.split()
+
+        while pointer+chain_length < len(split_message):
+            self.elastic.index(index=chain_length, doc_type='markov_chain',
+                               body={'key': ' '.join(split_message[pointer:pointer+chain_length]),
+                                     'value': split_message[pointer+chain_length]})
+            pointer += 1
+
+    def clean_punctuation(self, sentence):
+        #TODO: Implement this more "smartly"
+        sentence = sentence.replace('"', '')
+        sentence = sentence.replace('.', '')
+        return sentence
+
+    def generate_sentence(self, chain_type, seed, min_length, max_length):
+        #TODO: Current search / random methods are SUPER slow. There needs to be a better way.
+        sentence = ""
+        start = self.elastic.search(index=chain_type, q=seed)
+        max_search = start['hits']['total']
+        start = self.elastic.search(index=chain_type, q=seed, size=max_search)
+        start_key = random.choice(start['hits']['hits'])['_source']['key']
+        sentence += start_key
+        sentence = self.clean_punctuation(sentence)
+
+        for x in range(0, random.randint(min_length, max_length)):
+            target = ' '.join(sentence.split()[-chain_type:])
+            print("Search target: ", target)
+            search = self.elastic.search(index=chain_type, q='key:"' + target + '"', size=max_search)
+            result_list = search['hits']['hits']
+
+            if len(result_list) > 0:
+                results = random.choice(result_list)['_source']['value']
+                sentence += " " + results
+                sentence = self.clean_punctuation(sentence)
+
+        while not self.validate_ending(sentence):
+            target = ' '.join(sentence.split()[-chain_type:])
+            print("Search target: ", target)
+            search = self.elastic.search(index=chain_type, q='key:"' + target + '"', size=max_search)
+            result_list = search['hits']['hits']
+
+            if len(result_list) > 0:
+                results = random.choice(result_list)['_source']['value']
+                sentence += " " + results
+                sentence = self.clean_punctuation(sentence)
+
+        return sentence
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
         r = praw.Reddit(user_agent="https://github.com/gradiuscypher/internetmademe")
@@ -33,35 +85,13 @@ class Markov:
 
             print("Post processing completed.")
 
-    def build_chain(self, message, chain_length):
-        pointer = 0
-        split_message = message.split()
+    def validate_ending(self, sentence):
+        ## Meant to ensure that the result doesn't end in things like the, is, etc.
+        invalid_endings = ['a', 'is', 'the', 'and']
+        split_sentence = sentence.split()
 
-        while pointer+chain_length < len(split_message):
-            # print(' '.join(split_message[pointer:pointer+chain_length]), split_message[pointer+chain_length])
-            self.elastic.index(index=chain_length, doc_type='markov_chain',
-                               body={'key': ' '.join(split_message[pointer:pointer+chain_length]),
-                                     'value': split_message[pointer+chain_length]})
-            pointer += 1
-
-    def generate_sentence(self, chain_type, seed, min_length, max_length):
-        sentence = ""
-        start = self.elastic.search(index=chain_type, q=seed)
-        start_key = random.choice(start['hits']['hits'])['_source']['key']
-        sentence += start_key
-        # sentence = re.sub(r'\W+', ' ', sentence)
-        sentence = sentence.replace('.', ' ')
-
-        for x in range(0, random.randint(min_length, max_length)):
-            target = ' '.join(sentence.split()[-chain_type:])
-            # print("Search target: ", target)
-            search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
-            result_list = search['hits']['hits']
-
-            if len(result_list) > 0:
-                results = random.choice(result_list)['_source']['value']
-                sentence += " " + results
-                # sentence = re.sub(r'\W+', ' ', sentence)
-                sentence = sentence.replace('.', ' ')
-
-        return sentence
+        if split_sentence[-1] in invalid_endings:
+            print("BAD ENDING.")
+            return False
+        else:
+            return True
