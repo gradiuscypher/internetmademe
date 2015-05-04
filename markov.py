@@ -33,9 +33,10 @@ class Markov:
         sentence = ""
         start = self.elastic.search(index=chain_type, body={"query": {
             "function_score": {
-                "query": {"match_all": {}},
+                "query": {"match": {"key": seed}},
                 "random_score": {}
             }}})
+        print(len(start['hits']['hits']))
         start_key = random.choice(start['hits']['hits'])['_source']['key']
         sentence += start_key
         sentence = self.clean_punctuation(sentence)
