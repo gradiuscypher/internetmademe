@@ -4,6 +4,7 @@ import random
 
 
 #TODO: Tons of debug printing that needs to be cleaned up
+#TODO: not sure if case sensitivity is something I should address
 
 class Markov:
 
@@ -25,6 +26,7 @@ class Markov:
         #TODO: Implement this more "smartly"
         sentence = sentence.replace('"', '')
         sentence = sentence.replace('.', '')
+        sentence = sentence.replace(',', '')
         return sentence
 
     def generate_sentence(self, chain_type, seed, min_length, max_length):
@@ -40,7 +42,7 @@ class Markov:
 
         for x in range(0, random.randint(min_length, max_length)):
             target = ' '.join(sentence.split()[-chain_type:])
-            print("Search target: ", target)
+            # print("Search target: ", target)
             search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
             result_list = search['hits']['hits']
 
@@ -51,7 +53,7 @@ class Markov:
 
         while not self.validate_ending(sentence):
             target = ' '.join(sentence.split()[-chain_type:])
-            print("Search target: ", target)
+            # print("Search target: ", target)
             search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
             result_list = search['hits']['hits']
 
@@ -89,7 +91,7 @@ class Markov:
     def validate_ending(self, sentence):
         # Meant to ensure that the result doesn't end in things like the, is, etc.
         # TODO: More automation to sort this out
-        invalid_endings = ['a', 'is', 'the', 'and']
+        invalid_endings = ['a', 'is', 'the', 'and', 'i']
         split_sentence = sentence.split()
 
         if split_sentence[-1] in invalid_endings:
