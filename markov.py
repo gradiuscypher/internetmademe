@@ -67,8 +67,8 @@ class Markov:
                 sentence += " " + results
                 sentence = self.clean_punctuation(sentence)
 
-            #normalize case
-            sentence = sentence.lower()
+        #normalize case
+        sentence = sentence.lower()
 
         return sentence
 
