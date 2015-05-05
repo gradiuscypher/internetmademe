@@ -67,6 +67,9 @@ class Markov:
                 sentence += " " + results
                 sentence = self.clean_punctuation(sentence)
 
+            #normalize case
+            sentence = sentence.lower()
+
         return sentence
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
