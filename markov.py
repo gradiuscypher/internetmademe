@@ -12,24 +12,28 @@ class Markov:
         self.elastic = elasticsearch.Elasticsearch()
         random.seed()
 
-    def build_chain(self, message, chain_length):
+    def build_chain(self, message, chain_length, doc_type):
         pointer = 0
         split_message = message.split()
 
         while pointer+chain_length < len(split_message):
-            self.elastic.index(index=chain_length, doc_type='markov_chain',
+            self.elastic.index(index=chain_length, doc_type=doc_type,
                                body={'key': ' '.join(split_message[pointer:pointer+chain_length]),
                                      'value': split_message[pointer+chain_length]})
             pointer += 1
 
     def clean_punctuation(self, sentence):
         #TODO: Implement this more "smartly"
+        #TODO: Need something to remove URLs
         sentence = sentence.replace('"', '')
         sentence = sentence.replace('.', '')
+        sentence = sentence.replace(')', '')
+        sentence = sentence.replace('(', '')
         sentence = sentence.replace(',', '')
         return sentence
 
     def generate_sentence(self, chain_type, seed, min_length, max_length):
+        #TODO: Add functionality to select specific doc_types
         sentence = ""
         start = self.elastic.search(index=chain_type, body={"query": {
             "function_score": {
@@ -72,22 +76,31 @@ class Markov:
 
         #process post_count top posts
         for post in top:
-            print("Post processing started...")
-            comments = post.comments
-            #process top comment
-            for c in comments:
-                print("    Comment processing started...")
-                if type(c) is praw.objects.Comment:
-                    self.build_chain(c.body, chain_length)
-                    #process comment replies one tree down
-                    for r in c.replies:
-                        print("        Reply processing started...")
-                        if type(r) is praw.objects.Comment:
-                            self.build_chain(r.body, chain_length)
-                        print("        Reply processing completed.")
-                print("    Comment processing completed.")
 
-            print("Post processing completed.")
+            #Check if the post has already been indexed
+            if self.elastic.exists(index='indexed_posts', id=post.id):
+                print("This post already has been indexed.")
+
+            else:
+                #Add post id to indexed posts
+                self.elastic.index(index='indexed_posts', doc_type='post', id=post.id, body={"title": post.title})
+
+                print("Post processing started...")
+                comments = post.comments
+                #process top comment
+                for c in comments:
+                    print("    Comment processing started...")
+                    if type(c) is praw.objects.Comment:
+                        self.build_chain(c.body, chain_length, subreddit)
+                        #process comment replies one tree down
+                        for r in c.replies:
+                            print("        Reply processing started...")
+                            if type(r) is praw.objects.Comment:
+                                self.build_chain(r.body, chain_length, subreddit)
+                            print("        Reply processing completed.")
+                    print("    Comment processing completed.")
+
+                print("Post processing completed.")
 
     def validate_ending(self, sentence):
         # Meant to ensure that the result doesn't end in things like the, is, etc.
