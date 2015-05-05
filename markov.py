@@ -105,7 +105,8 @@ class Markov:
     def validate_ending(self, sentence):
         # Meant to ensure that the result doesn't end in things like the, is, etc.
         # TODO: More automation to sort this out
-        invalid_endings = ['a', 'is', 'the', 'and', 'i']
+        # TODO: Read from a file and add to an ES index to search from rather than a list
+        invalid_endings = ['a', 'is', 'the', 'and', 'i', 'if', 'during', 'from', 'as', 'to', 'lets']
         split_sentence = sentence.split()
 
         if split_sentence[-1] in invalid_endings:
