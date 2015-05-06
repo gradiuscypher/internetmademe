@@ -73,6 +73,7 @@ class Markov:
         return sentence
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
+        #TODO: The indexing doesn't differentiate between different chain sizes, fix this.
         r = praw.Reddit(user_agent="https://github.com/gradiuscypher/internetmademe")
         sub = r.get_subreddit(subreddit)
         top = sub.get_top_from_day(limit=post_count)
