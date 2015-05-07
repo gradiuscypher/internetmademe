@@ -10,6 +10,10 @@ class Markov:
 
     def __init__(self):
         self.elastic = elasticsearch.Elasticsearch()
+
+        #Max number of times ending validation will be attempted.
+        self.max_validation_attempt = 10
+
         random.seed()
 
     def build_chain(self, message, chain_length, doc_type):
@@ -49,7 +53,6 @@ class Markov:
                 "query": {"wildcard": {"key": seed}},
                 "random_score": {}
             }}})
-        print(len(start['hits']['hits']))
         start_key = random.choice(start['hits']['hits'])['_source']['key']
         sentence += start_key
         sentence = self.clean_punctuation(sentence)
@@ -65,7 +68,10 @@ class Markov:
                 sentence += " " + results
                 sentence = self.clean_punctuation(sentence)
 
-        while not self.validate_ending(sentence):
+        validated = self.validate_ending(sentence)
+        attempt_count = 0
+
+        while not validated and attempt_count <= self.max_validation_attempt:
             target = ' '.join(sentence.split()[-chain_type:])
             # print("Search target: ", target)
             search = self.elastic.search(index=chain_type, q='key:"' + target + '"')
@@ -76,10 +82,19 @@ class Markov:
                 sentence += " " + results
                 sentence = self.clean_punctuation(sentence)
 
-        #normalize case
-        sentence = sentence.lower()
+            validated = self.validate_ending(sentence)
+            attempt_count += 1
 
-        return sentence
+        if validated:
+            #normalize case
+            sentence = sentence.lower()
+
+            return sentence
+
+        else:
+            #TODO: NOT SURE IF THIS IS A GOOD IDEA, MIGHT LEAD TO INF RECURSION IN RARE CASES.
+            #TODO: WILL LEAD TO RECURSION IF MALICIOUS SEED IS PROVIDED.
+            return self.generate_sentence(chain_type, seed, min_length, max_length)
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
         #TODO: The indexing doesn't differentiate between different chain sizes, fix this.
@@ -123,7 +138,7 @@ class Markov:
         count = self.elastic.search(index='stopwords', q='word:"' + last_word + '"')['hits']['total']
 
         if count is not 0:
-            print("Bad ending!")
+            # print("Bad ending!")
             return False
 
         else:
