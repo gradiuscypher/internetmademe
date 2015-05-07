@@ -32,6 +32,15 @@ class Markov:
         sentence = sentence.replace(',', '')
         return sentence
 
+    def generate_bad_ending_index(self, ending_file):
+        endings = open(ending_file, 'r')
+
+        for line in endings:
+            clean_line = line.strip('\n')
+            self.elastic.index(index='stopwords', doc_type='stopword', body={'word': clean_line})
+
+        endings.close()
+
     def generate_sentence(self, chain_type, seed, min_length, max_length):
         #TODO: Add functionality to select specific doc_types
         sentence = ""
@@ -108,13 +117,14 @@ class Markov:
 
     def validate_ending(self, sentence):
         # Meant to ensure that the result doesn't end in things like the, is, etc.
-        # TODO: More automation to sort this out
-        # TODO: Read from a file and add to an ES index to search from rather than a list
-        invalid_endings = ['a', 'is', 'the', 'and', 'i', 'if', 'during', 'from', 'as', 'to', 'lets', 'my']
         split_sentence = sentence.split()
+        last_word = split_sentence[-1]
 
-        if split_sentence[-1] in invalid_endings:
-            print("BAD ENDING.")
+        count = self.elastic.search(index='stopwords', q='word:"' + last_word + '"')['hits']['total']
+
+        if count is not 0:
+            print("Bad ending!")
             return False
+
         else:
             return True
