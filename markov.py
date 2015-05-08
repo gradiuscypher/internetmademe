@@ -3,9 +3,6 @@ import praw
 import random
 
 
-#TODO: Tons of debug printing that needs to be cleaned up
-#TODO: not sure if case sensitivity is something I should address
-
 class Markov:
 
     def __init__(self):
@@ -27,8 +24,6 @@ class Markov:
             pointer += 1
 
     def clean_punctuation(self, sentence):
-        #TODO: Implement this more "smartly"
-        #TODO: Need something to remove URLs
         sentence = sentence.replace('"', '')
         sentence = sentence.replace('.', '')
         sentence = sentence.replace(')', '')
@@ -46,7 +41,6 @@ class Markov:
         endings.close()
 
     def generate_sentence(self, chain_type, seed, min_length, max_length):
-        #TODO: Add functionality to select specific doc_types
         sentence = ""
         start = self.elastic.search(index=chain_type, body={"query": {
             "function_score": {
@@ -92,8 +86,6 @@ class Markov:
             return sentence
 
         else:
-            #TODO: NOT SURE IF THIS IS A GOOD IDEA, MIGHT LEAD TO INF RECURSION IN RARE CASES.
-            #TODO: WILL LEAD TO RECURSION IF MALICIOUS SEED IS PROVIDED.
             return self.generate_sentence(chain_type, seed, min_length, max_length)
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
@@ -106,12 +98,13 @@ class Markov:
         for post in top:
 
             #Check if the post has already been indexed
-            if self.elastic.exists(index='indexed_posts', id=post.id):
+            index_name = str(chain_length) + 'index'
+            if self.elastic.exists(index=index_name, id=post.id):
                 print("This post already has been indexed.")
 
             else:
                 #Add post id to indexed posts
-                self.elastic.index(index='indexed_posts', doc_type='post', id=post.id, body={"title": post.title})
+                self.elastic.index(index=index_name, doc_type='post', id=post.id, body={"title": post.title})
 
                 print("Post processing started...")
                 comments = post.comments
