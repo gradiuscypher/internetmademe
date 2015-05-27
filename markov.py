@@ -40,13 +40,22 @@ class Markov:
 
         endings.close()
 
-    def generate_sentence(self, chain_type, seed, min_length, max_length):
+    def generate_sentence(self, chain_type, seed, min_length, max_length, query_type='wildcard'):
         sentence = ""
-        start = self.elastic.search(index=chain_type, body={"query": {
-            "function_score": {
-                "query": {"wildcard": {"key": seed}},
-                "random_score": {}
-            }}})
+
+        if query_type == 'match':
+            start = self.elastic.search(index=chain_type, body={"query": {
+                "function_score": {
+                    "query": {"match": {"key": seed}},
+                    "random_score": {}
+                }}})
+        else:
+            start = self.elastic.search(index=chain_type, body={"query": {
+                "function_score": {
+                    "query": {"wildcard": {"key": seed}},
+                    "random_score": {}
+                }}})
+
         start_key = random.choice(start['hits']['hits'])['_source']['key']
         sentence += start_key
         sentence = self.clean_punctuation(sentence)
@@ -86,7 +95,7 @@ class Markov:
             return sentence
 
         else:
-            return self.generate_sentence(chain_type, seed, min_length, max_length)
+            return self.generate_sentence(chain_type, seed, min_length, max_length, query_type)
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
         #TODO: The indexing doesn't differentiate between different chain sizes, fix this.
