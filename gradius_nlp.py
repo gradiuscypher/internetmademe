@@ -5,7 +5,7 @@ import random
 from nltk import word_tokenize, pos_tag
 
 
-class GradiusNlp():
+class GradiusNlp:
 
     def __init__(self):
         self.elastic = elasticsearch.Elasticsearch()
@@ -54,19 +54,24 @@ class GradiusNlp():
                                     else:
                                         self.elastic.index(index=es_index, doc_type='word', body={'word': tag[0].lower()})
 
-    def reform_sentence(self, sentence, reform_chance=20, force_replace_count=1):
+    def reform_sentence(self, sentence, force_replace_count=1):
         sentence_tokens = word_tokenize(sentence)
-        tagged_tokens = pos_tag(sentence_tokens)
-        new_sentence = sentence
 
-        #Pick a random token(s) to replace for a count of force_replacement_count
-        #TODO: Ensure that you're replacing a whole word and not segments of a word.
-        for x in range(0, force_replace_count):
+        replace_count = random.randint(force_replace_count, len(sentence_tokens))
+        print(replace_count)
+
+        #Ensure at least force_replace_count words are being replaced
+        for x in range(0, replace_count):
+            tagged_tokens = pos_tag(sentence_tokens)
             choice = random.choice(tagged_tokens)
-            new_word = self.replace_pos(choice)
-            new_sentence = new_sentence.replace(choice[0], new_word)
 
-        return new_sentence
+            while choice[0] in string.punctuation:
+                choice = random.choice(tagged_tokens)
+
+            new_word = self.replace_pos(choice)
+            sentence_tokens[sentence_tokens.index(choice[0])] = new_word
+
+        return ' '.join(sentence_tokens)
 
     def replace_pos(self, pos_tuple):
         es_index = pos_tuple[1].lower()

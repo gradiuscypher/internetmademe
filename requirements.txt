@@ -3,7 +3,6 @@ ipython==3.1.0
 nltk==3.0.4
 numpy==1.9.2
 praw==3.1.0
-psycopg2==2.6.1
 requests==2.7.0
 six==1.9.0
 update-checker==0.11
