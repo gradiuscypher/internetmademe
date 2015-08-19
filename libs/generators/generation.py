@@ -1,5 +1,5 @@
 from libs.gradiusnlp.gradiusnlp import GradiusNlp
-from libs.markov.markov import Markov
+from libs.markov.old.markov import Markov
 
 # TODO: Pull all Reddit content locally so that we don't have to double pull.
 
