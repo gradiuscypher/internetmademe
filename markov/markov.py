@@ -8,7 +8,7 @@ class Markov:
     def __init__(self):
         self.elastic = elasticsearch.Elasticsearch()
 
-        #Max number of times ending validation will be attempted.
+        # Max number of times ending validation will be attempted.
         self.max_validation_attempt = 10
 
         random.seed()
@@ -31,7 +31,7 @@ class Markov:
         sentence = sentence.replace(',', '')
         return sentence
 
-    def generate_bad_ending_index(self, ending_file):
+    def generate_stopword_index(self, ending_file):
         endings = open(ending_file, 'r')
 
         for line in endings:
@@ -89,7 +89,7 @@ class Markov:
             attempt_count += 1
 
         if validated:
-            #normalize case
+            # normalize case
             sentence = sentence.lower()
 
             return sentence
@@ -98,31 +98,31 @@ class Markov:
             return self.generate_sentence(chain_type, seed, min_length, max_length, query_type)
 
     def seed_from_reddit(self, subreddit, post_count, chain_length):
-        #TODO: The indexing doesn't differentiate between different chain sizes, fix this.
+        # TODO: The indexing doesn't differentiate between different chain sizes, fix this.
         r = praw.Reddit(user_agent="https://github.com/gradiuscypher/internetmademe")
         sub = r.get_subreddit(subreddit)
         top = sub.get_top_from_day(limit=post_count)
 
-        #process post_count top posts
+        # process post_count top posts
         for post in top:
 
-            #Check if the post has already been indexed
+            # Check if the post has already been indexed
             index_name = str(chain_length) + 'index'
-            if self.elastic.exists(index=index_name, id=post.id):
+            if self.elastic.exists(index=index_name, id=post.id, doc_type='post'):
                 print("This post already has been indexed.")
 
             else:
-                #Add post id to indexed posts
+                # Add post id to indexed posts
                 self.elastic.index(index=index_name, doc_type='post', id=post.id, body={"title": post.title})
 
                 print("Post processing started...")
                 comments = post.comments
-                #process top comment
+                # process top comment
                 for c in comments:
                     print("    Comment processing started...")
                     if type(c) is praw.objects.Comment:
                         self.build_chain(c.body, chain_length, subreddit)
-                        #process comment replies one tree down
+                        # process comment replies one tree down
                         for r in c.replies:
                             print("        Reply processing started...")
                             if type(r) is praw.objects.Comment:
