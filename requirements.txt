@@ -1,6 +1,6 @@
 decorator==4.0.2
 elasticsearch==1.6.0
-ipython==3.1.0
+ipython==7.16.3
 nltk==3.0.4
 numpy==1.9.2
 praw==3.2.0
