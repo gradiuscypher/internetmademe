@@ -2,7 +2,7 @@ decorator==4.0.2
 elasticsearch==1.6.0
 ipython==3.1.0
 nltk==3.0.4
-numpy==1.9.2
+numpy==1.21.0
 praw==3.2.0
 psycopg2==2.6.1
 requests==2.7.0
